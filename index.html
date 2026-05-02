@@ -548,15 +548,11 @@
       video.currentTime = video.duration || 0;
       showToast('⏭ 最後へ');
     }
-    // ぼかしON
-    else if (/ぼかし|隠|lock/i.test(text) && /オン|on|入|つけ/i.test(text)) {
-      applyBlur(true);
-      showToast('🔒 ぼかし ON');
-    }
-    // ぼかしOFF
-    else if (/ぼかし|隠|unlock/i.test(text) && /オフ|off|切|消/i.test(text)) {
-      applyBlur(false);
-      showToast('🔓 ぼかし OFF');
+    // ぼかしトグル（「ぼかし」だけで ON/OFF 切替）
+    else if (/ぼかし|隠せ|隠す|lock|unlock/i.test(text)) {
+      const next = !blurOn;
+      applyBlur(next);
+      showToast(next ? '🔒 ぼかし ON' : '🔓 ぼかし OFF');
     }
     else {
       showToast(`「${text}」— 認識できませんでした`);

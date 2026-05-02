@@ -314,6 +314,20 @@
     <!-- 現在時刻 -->
     <div class="clock" id="clock">
       <span class="clock-time" id="clockTime">--:--:--</span>
+    <script>
+      (function() {
+        function tick() {
+          var now = new Date();
+          var hh  = String(now.getHours()).padStart(2,'0');
+          var mm  = String(now.getMinutes()).padStart(2,'0');
+          var ss  = String(now.getSeconds()).padStart(2,'0');
+          var el  = document.getElementById('clockTime');
+          if (el) el.textContent = hh + '時' + mm + '分' + ss + '秒';
+        }
+        tick();
+        setInterval(tick, 1000);
+      })();
+    </script>
     </div>
     <div class="header-btns">
       <button class="icon-btn" id="btnBlur" title="ぼかしモード切替 (B)"><span id="blurIcon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">

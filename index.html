@@ -106,13 +106,13 @@
     transition: all 0.2s;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+    outline: none;
   }
-  .icon-btn:active { transform: scale(0.9); }
-  .icon-btn svg { stroke: var(--accent); fill: none; }
+  .icon-btn svg { stroke: var(--accent); fill: none; pointer-events: none; }
   
   .icon-btn.active { border-color: var(--accent); background: rgba(232,200,122,0.15); }
   .icon-btn.danger { border-color: var(--danger); }
-  .icon-btn.listening { animation: pulse 1.5s infinite; border-color: var(--danger); }
+  .icon-btn.listening { animation: pulse 1.5s infinite; border-color: var(--danger); background: rgba(255, 79, 79, 0.1); }
 
   @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(255, 79, 79, 0.4); }
@@ -136,9 +136,8 @@
     box-shadow: 0 0 30px rgba(232,200,122,0.3);
     cursor: pointer;
   }
-  .play-toggle:active { transform: translate(-50%, -50%) scale(0.9); }
   
-  .play-icon, .pause-icon { position: absolute; }
+  .play-icon, .pause-icon { position: absolute; pointer-events: none; }
   .playing .play-icon { display: none; }
   .paused .pause-icon { display: none; }
 
@@ -176,7 +175,6 @@
     width: 14px; height: 14px;
     border-radius: 50%;
     background: var(--accent);
-    box-shadow: 0 0 10px rgba(232,200,122,0.5);
   }
 
   .time-label {
@@ -200,17 +198,17 @@
   <header>
     <div class="clock"><span class="clock-time" id="clockTime">00:00:00</span></div>
     <div class="header-btns">
-      <button class="icon-btn" id="btnBlur">
+      <button class="icon-btn" id="btnBlur" title="LOCKED / UNLOCKED">
         <svg width="26" height="26" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
         </svg>
       </button>
-      <button class="icon-btn" id="openBtn">
+      <button class="icon-btn" id="openBtn" title="OPEN FILE">
         <svg width="26" height="26" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
         </svg>
       </button>
-      <button class="icon-btn" id="btnVoice">
+      <button class="icon-btn" id="btnVoice" title="VOICE CONTROL">
         <svg width="26" height="26" viewBox="0 0 24 24" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
       </button>
@@ -246,7 +244,10 @@
   const btnVoice = document.getElementById('btnVoice');
   const toast = document.getElementById('toast');
 
-  // --- 1. 時計 (HH:MM:SS) ---
+  // --- 初期設定: ミュートで開始 ---
+  video.muted = true;
+
+  // --- 1. 時計 ---
   function updateClock() {
     const now = new Date();
     clockTime.textContent = now.toTimeString().split(' ')[0];
@@ -266,7 +267,7 @@
   }
   playBtn.addEventListener('click', togglePlay);
 
-  // --- 3. シークバー連動 ---
+  // --- 3. シークバー ---
   function formatTime(s) {
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
@@ -275,8 +276,7 @@
 
   video.addEventListener('timeupdate', () => {
     if (!video.duration) return;
-    const progress = (video.currentTime / video.duration) * 100;
-    seek.value = progress;
+    seek.value = (video.currentTime / video.duration) * 100;
     timeLabel.textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
   });
 
@@ -289,59 +289,88 @@
     timeLabel.textContent = `00:00 / ${formatTime(video.duration)}`;
   });
 
-  // --- 4. フォルダ (ファイル読み込み) ---
+  // --- 4. ファイル読み込み ---
   openBtn.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => {
     const file = e.target.files[0];
     if (file) {
       video.src = URL.createObjectURL(file);
+      video.muted = true; // 新しい動画もミュートで開始
       video.play();
       playBtn.className = 'play-toggle playing';
-      showToast("VIDEO LOADED");
+      showToast("VIDEO LOADED (MUTED)");
     }
   });
 
-  // --- 5. ぼかしモード (ブラックアウト) ---
+  // --- 5. ぼかしモード (LOCKED/UNLOCKED) ---
   let isBlurred = false;
   btnBlur.addEventListener('click', () => {
     isBlurred = !isBlurred;
     blurOverlay.classList.toggle('active', isBlurred);
     btnBlur.classList.toggle('active', isBlurred);
     btnBlur.classList.toggle('danger', isBlurred);
+    
     if (isBlurred) {
       video.pause();
       playBtn.className = 'play-toggle paused';
       showToast("LOCKED");
     } else {
-      showToast("UNLOCKED");
+      video.muted = false; // 解除と同時にミュート解除
+      video.play().catch(()=>{});
+      playBtn.className = 'play-toggle playing';
+      showToast("UNLOCKED & PLAYING");
     }
   });
 
-  // --- 6. 音声認識 (簡易コマンド) ---
+  // --- 6. 音声認識 (永続ループ設定) ---
   let recognition;
+  let voiceEnabled = false;
+
   function showToast(msg) {
     toast.textContent = msg;
     toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
   if ('webkitSpeechRecognition' in window) {
     recognition = new webkitSpeechRecognition();
     recognition.lang = 'ja-JP';
+    recognition.continuous = true; // 連続認識
+    recognition.interimResults = false;
+
     recognition.onresult = (e) => {
-      const cmd = e.results[0][0].transcript;
+      const cmd = e.results[e.results.length - 1][0].transcript;
       showToast(`CMD: ${cmd}`);
-      if (cmd.includes("再生")) video.play();
-      if (cmd.includes("停止") || cmd.includes("止めて")) video.pause();
+      if (cmd.includes("再生")) { video.play(); playBtn.className = 'play-toggle playing'; }
+      if (cmd.includes("停止") || cmd.includes("止めて")) { video.pause(); playBtn.className = 'play-toggle paused'; }
+      if (cmd.includes("ミュート")) video.muted = true;
+      if (cmd.includes("解除")) video.muted = false;
     };
-    recognition.onend = () => btnVoice.classList.remove('listening');
+
+    recognition.onend = () => {
+      // ユーザーが意図的にOFFにしていない場合は再起動
+      if (voiceEnabled) recognition.start();
+    };
+
+    recognition.onerror = () => {
+        if (voiceEnabled) setTimeout(() => recognition.start(), 1000);
+    };
   }
 
   btnVoice.addEventListener('click', () => {
     if (!recognition) return showToast("NOT SUPPORTED");
-    recognition.start();
-    btnVoice.classList.add('listening');
-    showToast("LISTENING...");
+    
+    if (voiceEnabled) {
+      voiceEnabled = false;
+      recognition.stop();
+      btnVoice.classList.remove('listening');
+      showToast("VOICE OFF");
+    } else {
+      voiceEnabled = true;
+      recognition.start();
+      btnVoice.classList.add('listening');
+      showToast("VOICE ON (LOOP)");
+    }
   });
 
   // --- 7. UI 自動非表示 ---

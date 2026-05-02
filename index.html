@@ -335,6 +335,7 @@
     </div>
     <div class="header-btns">
       <button class="icon-btn" id="btnBlur" title="ぼかしモード切替 (B)">🔓</button>
+      <button class="icon-btn" id="btnMute" title="ミュート切替">🔊</button>
       <button class="open-btn" id="openBtn">📂</button>
       <button class="icon-btn" id="btnVoice" title="音声コントロール">🎤</button>
       <input type="file" id="fileInput" accept="video/*">
@@ -381,6 +382,27 @@
   let blurOn = false;
   let pausedByMode = false;
   let uiTimer = null;
+  let muteOn = false;
+
+  // ═══════════════════════════════════
+  // MUTE BUTTON — ONにしたらOFFにするまでミュート維持
+  // ═══════════════════════════════════
+  const btnMute = document.getElementById('btnMute');
+
+  function applyMute(on) {
+    muteOn = on;
+    video.muted = on;
+    btnMute.textContent = on ? '🔇' : '🔊';
+    btnMute.classList.toggle('active', on);
+  }
+
+  btnMute.addEventListener('click', () => {
+    applyMute(!muteOn);
+    showUI();
+  });
+
+  // ぼかしモード解除時もミュートボタンがONなら維持
+  // （blurモードのミュートと独立して動作）
 
   // ═══════════════════════════════════
   // UI 表示／自動非表示
@@ -475,8 +497,8 @@
     } else {
       if (pausedByMode) { video.play().catch(()=>{}); pausedByMode = false; }
     }
-    // mute
-    video.muted = on;
+    // mute: ぼかしON時はミュート、OFF時はミュートボタンの状態に従う
+    video.muted = on ? true : muteOn;
   }
 
   btnBlur.addEventListener('click', () => applyBlur(!blurOn));
@@ -574,15 +596,24 @@
       handleCommand(text);
     };
     r.onend = () => {
-      isListening = false;
-      btnVoice.classList.remove('listening');
-      btnVoice.textContent = '🎤';
+      // isListening が true のままなら自動で再スタート（連続モード）
+      if (isListening) {
+        try { r.start(); } catch(_) {}
+      } else {
+        btnVoice.classList.remove('listening');
+        btnVoice.textContent = '🎤';
+      }
     };
     r.onerror = e => {
+      if (e.error === 'no-speech') {
+        // 無音は無視して継続
+        return;
+      }
+      if (e.error === 'aborted') return;
+      showToast('音声認識エラー: ' + e.error);
       isListening = false;
       btnVoice.classList.remove('listening');
       btnVoice.textContent = '🎤';
-      if (e.error !== 'no-speech') showToast('音声認識エラー: ' + e.error);
     };
     return r;
   }
@@ -590,15 +621,21 @@
   btnVoice.addEventListener('click', () => {
     showUI();
     if (isListening) {
+      // OFFにする
+      isListening = false;
       recognition && recognition.stop();
+      btnVoice.classList.remove('listening');
+      btnVoice.textContent = '🎤';
+      showToast('🎤 音声認識 OFF');
       return;
     }
+    // ONにする
     recognition = setupRecognition();
     if (!recognition) return;
     isListening = true;
     btnVoice.classList.add('listening');
     btnVoice.textContent = '🔴';
-    showToast('🎤 聞いています…');
+    showToast('🎤 音声認識 ON — ボタンを再度押すとOFF');
     recognition.start();
   });
 

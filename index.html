@@ -156,7 +156,6 @@
   }
   input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
   #seek { --p: 0%; background: linear-gradient(to right, var(--accent) var(--p), rgba(255,255,255,0.1) var(--p)); }
-  #volume { --v: 80%; background: linear-gradient(to right, var(--accent2) var(--v), rgba(255,255,255,0.1) var(--v)); max-width: 90px; }
 
   /* ── BUTTON ROW ── */
   .btn-row {
@@ -242,24 +241,7 @@
   }
   .open-btn:active { transform: scale(0.92); }
 
-  /* ── VOLUME ROW ── */
-  .vol-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,0.07);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 20px;
-    padding: 0 12px;
-    height: 36px;
-  }
-  .vol-icon {
-    font-size: 18px;
-    line-height: 1;
-    cursor: pointer;
-    user-select: none;
-    flex-shrink: 0;
-  }
+
 
   /* ─── HIDDEN FILE INPUT ─── */
   #fileInput { display: none; }

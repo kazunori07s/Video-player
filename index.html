@@ -4,15 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>CINÉMA — Video Player</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
     --bg: #000000;
     --accent: #e8c87a; /* カームゴールド */
+    --danger: #ff4f4f;
     --text: rgba(255,255,255,0.9);
-    --border: rgba(255,255,255,0.2);
+    --border: rgba(255,255,255,0.25);
   }
 
   html, body {
@@ -28,6 +29,7 @@
     inset: 0;
     width: 100%;
     height: 100%;
+    background: #000;
   }
 
   video {
@@ -38,39 +40,50 @@
     object-fit: contain;
   }
 
+  /* ─── BLUR/BLACKOUT OVERLAY ─── */
+  .blur-overlay {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    z-index: 15;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .blur-overlay.active { opacity: 1; pointer-events: auto; }
+
   /* ─── HEADER ─── */
   header {
     position: absolute;
     top: 0; left: 0; right: 0;
     z-index: 20;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     padding: max(16px, env(safe-area-inset-top)) 20px;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+    background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
     opacity: 0;
     transition: opacity 0.4s ease;
   }
 
   .clock-time {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 24px;
-    letter-spacing: 0.1em;
+    font-size: 22px;
+    letter-spacing: 0.05em;
     color: #fff;
   }
 
   .header-btns {
     display: flex;
-    gap: 12px;
+    gap: 10px;
   }
 
-  /* ─── BUTTONS ─── */
   .icon-btn {
-    background: rgba(0,0,0,0.4);
-    border: 1px solid var(--border);
+    background: rgba(0,0,0,0.5);
+    border: 1.5px solid var(--border);
     border-radius: 50%;
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
@@ -79,15 +92,25 @@
   }
   .icon-btn:active { transform: scale(0.9); }
   .icon-btn svg { stroke: var(--accent); }
-  .icon-btn.active { border-color: var(--accent); background: rgba(232,200,122,0.1); }
+  
+  /* 状態表示 */
+  .icon-btn.active { border-color: var(--accent); background: rgba(232,200,122,0.15); }
+  .icon-btn.danger { border-color: var(--danger); }
+  .icon-btn.listening { animation: pulse 1.5s infinite; border-color: var(--danger); }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 79, 79, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 79, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 79, 79, 0); }
+  }
 
   /* ─── CONTROLS ─── */
   .controls {
     position: absolute;
     bottom: 0; left: 0; right: 0;
     z-index: 20;
-    padding: 20px 20px max(24px, env(safe-area-inset-bottom));
-    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    padding: 20px 20px max(20px, env(safe-area-inset-bottom));
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
     opacity: 0;
     transition: opacity 0.4s ease;
   }
@@ -95,90 +118,56 @@
   .app.ui-visible header,
   .app.ui-visible .controls { opacity: 1; }
 
-  .seekbar-row {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-
-  input[type=range] {
-    -webkit-appearance: none;
-    flex-grow: 1;
-    height: 2px;
-    background: rgba(255,255,255,0.2);
-    outline: none;
-  }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    background: var(--accent);
-    cursor: pointer;
-  }
-
-  .time-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    color: var(--accent);
-    min-width: 100px;
-    text-align: right;
-  }
-
-  /* ─── PLAY BUTTON ─── */
-  .play-toggle {
+  /* ─── TOAST ─── */
+  .toast {
     position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 72px; height: 72px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: none;
-    display: flex; align-items: center; justify-content: center;
+    top: 20%; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    border: 1px solid var(--accent);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 100;
     opacity: 0;
     transition: opacity 0.3s;
-    z-index: 25;
-    box-shadow: 0 0 20px rgba(232,200,122,0.3);
+    pointer-events: none;
   }
-  .app.ui-visible .play-toggle { opacity: 1; }
-  
-  .play-icon, .pause-icon { position: absolute; }
-  .playing .play-icon { display: none; }
-  .paused .pause-icon { display: none; }
+  .toast.show { opacity: 1; }
 
   #fileInput { display: none; }
-
 </style>
 </head>
 <body>
 
 <div class="app ui-visible" id="app">
-  <video id="video"></video>
+  <video id="video" playsinline></video>
+  <div class="blur-overlay" id="blurOverlay"></div>
+  <div class="toast" id="toast"></div>
   
   <header>
     <div class="clock"><span class="clock-time" id="clockTime">00:00:00</span></div>
     <div class="header-btns">
-      <button class="icon-btn" id="btnBlur">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      <button class="icon-btn" id="btnBlur" title="ぼかし/ロック">
+        <svg id="blurIcon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+        </svg>
       </button>
-      <button class="icon-btn" id="openBtn">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+      <button class="icon-btn" id="openBtn" title="ファイルを開く">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+        </svg>
       </button>
-      <button class="icon-btn" id="btnVoice">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+      <button class="icon-btn" id="btnVoice" title="音声操作">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/>
+        </svg>
       </button>
     </div>
   </header>
 
-  <button class="play-toggle paused" id="playBtn">
-    <div class="play-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><polygon points="5 3 19 12 5 21 5 3"/></svg></div>
-    <div class="pause-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="#000"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg></div>
-  </button>
-
   <div class="controls">
-    <div class="seekbar-row">
-      <input type="range" id="seek" value="0">
-      <div class="time-label" id="timeLabel">00:00 / 00:00</div>
-    </div>
+    <input type="range" id="seek" style="width: 100%;" value="0">
   </div>
 
   <input type="file" id="fileInput" accept="video/*">
@@ -188,10 +177,14 @@
   const video = document.getElementById('video');
   const app = document.getElementById('app');
   const clockTime = document.getElementById('clockTime');
-  const playBtn = document.getElementById('playBtn');
+  const btnBlur = document.getElementById('btnBlur');
+  const blurOverlay = document.getElementById('blurOverlay');
+  const openBtn = document.getElementById('openBtn');
   const fileInput = document.getElementById('fileInput');
+  const btnVoice = document.getElementById('btnVoice');
+  const toast = document.getElementById('toast');
 
-  // 時計の更新 (00:00:00 形式)
+  // 1. 時計の更新 (00:00:00)
   function updateClock() {
     const now = new Date();
     clockTime.textContent = now.toTimeString().split(' ')[0];
@@ -199,7 +192,72 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  // UI表示制御
+  // 2. フォルダボタン (ファイル選択)
+  openBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      video.src = URL.createObjectURL(file);
+      video.play();
+      showToast("Video Loaded");
+    }
+  });
+
+  // 3. ぼかしモード (ブラックアウト + 一時停止)
+  let isBlurred = false;
+  btnBlur.addEventListener('click', () => {
+    isBlurred = !isBlurred;
+    blurOverlay.classList.toggle('active', isBlurred);
+    btnBlur.classList.toggle('active', isBlurred);
+    btnBlur.classList.toggle('danger', isBlurred);
+    
+    if (isBlurred) {
+      video.pause();
+      showToast("Locked");
+    } else {
+      video.play().catch(()=>{});
+      showToast("Unlocked");
+    }
+  });
+
+  // 4. マイクボタン (音声認識)
+  let recognition;
+  let isListening = false;
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = 'ja-JP';
+    recognition.onresult = (e) => {
+      const command = e.results[0][0].transcript;
+      showToast(`Command: ${command}`);
+      if (command.includes("再生")) video.play();
+      if (command.includes("停止")) video.pause();
+    };
+    recognition.onend = () => {
+      isListening = false;
+      btnVoice.classList.remove('listening');
+    };
+  }
+
+  btnVoice.addEventListener('click', () => {
+    if (!recognition) return showToast("Not Supported");
+    if (isListening) {
+      recognition.stop();
+    } else {
+      recognition.start();
+      isListening = true;
+      btnVoice.classList.add('listening');
+      showToast("Listening...");
+    }
+  });
+
+  // UI自動非表示
   let uiTimer;
   function showUI() {
     app.classList.add('ui-visible');
@@ -207,29 +265,9 @@
     uiTimer = setTimeout(() => app.classList.remove('ui-visible'), 3000);
   }
   app.addEventListener('mousemove', showUI);
-  app.addEventListener('click', showUI);
+  app.addEventListener('touchstart', showUI);
+  showUI();
 
-  // ファイル読み込み
-  document.getElementById('openBtn').addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if (file) {
-      video.src = URL.createObjectURL(file);
-      video.play();
-      playBtn.className = 'play-toggle playing';
-    }
-  });
-
-  // 再生・停止
-  playBtn.addEventListener('click', () => {
-    if (video.paused) {
-      video.play();
-      playBtn.className = 'play-toggle playing';
-    } else {
-      video.pause();
-      playBtn.className = 'play-toggle paused';
-    }
-  });
 </script>
 </body>
 </html>

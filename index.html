@@ -295,6 +295,55 @@
     font-size: 10px;
     font-family: inherit;
   }
+
+  /* ── HELP MODAL ── */
+  .help-btn {
+    background: rgba(0,0,0,0.55); border: 1.5px solid rgba(255,255,255,0.25); border-radius: 50%;
+    width: 48px; height: 48px; cursor: pointer; font-size: 22px; color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .help-btn:active { transform: scale(0.92); }
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: auto; }
+  .modal {
+    background: #151a21; border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 24px 20px; width: min(320px, 90vw);
+    transform: translateY(12px); transition: transform 0.25s;
+  }
+  .modal-overlay.show .modal { transform: translateY(0); }
+  .modal-title {
+    font-size: 13px; font-weight: 500; letter-spacing: 0.1em;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-close {
+    background: none; border: none; color: var(--muted); font-size: 20px;
+    cursor: pointer; padding: 0 4px; line-height: 1;
+  }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section-title {
+    font-size: 11px; color: var(--muted); letter-spacing: 0.08em;
+    text-transform: uppercase; margin-bottom: 8px; padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .cmd-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .cmd-row:last-child { border-bottom: none; }
+  .cmd-word {
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    color: var(--accent); background: rgba(232,200,122,0.1);
+    padding: 2px 8px; border-radius: 6px;
+  }
+  .cmd-desc { font-size: 12px; color: var(--muted); text-align: right; }
 </style>
 </head>
 <body>
@@ -327,7 +376,23 @@
         tick();
         setInterval(tick, 1000);
       })();
-    </script>
+    
+  // ── HELP MODAL ──
+  const helpOverlay = document.getElementById('helpOverlay');
+  const btnHelp     = document.getElementById('btnHelp');
+  const helpClose   = document.getElementById('helpClose');
+
+  btnHelp.addEventListener('click', () => {
+    helpOverlay.classList.add('show');
+  });
+  helpClose.addEventListener('click', () => {
+    helpOverlay.classList.remove('show');
+  });
+  helpOverlay.addEventListener('click', (e) => {
+    if (e.target === helpOverlay) helpOverlay.classList.remove('show');
+  });
+
+</script>
     </div>
     <div class="header-btns">
       <button class="icon-btn" id="btnBlur" title="ぼかしモード切替 (B)"><span id="blurIcon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -342,6 +407,13 @@
   <line x1="9" y1="14" x2="15" y2="14"/>
 </svg></button>
       <button class="icon-btn" id="btnVoice" title="音声コントロール">🎤</button>
+      <button class="help-btn" id="btnHelp" title="音声コマンド一覧">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </button>
       <input type="file" id="fileInput" accept="video/*">
     </div>
   </header>
@@ -555,113 +627,4 @@
       showToast(next ? '🔒 ぼかし ON' : '🔓 ぼかし OFF');
     }
     else {
-      showToast(`「${text}」— 認識できませんでした`);
-    }
-  }
-
-  function setupRecognition() {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      showToast('このブラウザは音声認識非対応です');
-      return null;
-    }
-    const r = new SR();
-    r.lang = 'ja-JP';
-    r.continuous = false;
-    r.interimResults = false;
-
-    r.onresult = e => {
-      const text = e.results[0][0].transcript;
-      handleCommand(text);
-    };
-    r.onend = () => {
-      // isListening が true のままなら自動で再スタート（連続モード）
-      if (isListening) {
-        try { r.start(); } catch(_) {}
-      } else {
-        btnVoice.classList.remove('listening');
-        btnVoice.textContent = '🎤';
-      }
-    };
-    r.onerror = e => {
-      if (e.error === 'no-speech') {
-        // 無音は無視して継続
-        return;
-      }
-      if (e.error === 'aborted') return;
-      showToast('音声認識エラー: ' + e.error);
-      isListening = false;
-      btnVoice.classList.remove('listening');
-      btnVoice.textContent = '🎤';
-    };
-    return r;
-  }
-
-  btnVoice.addEventListener('click', () => {
-    showUI();
-    if (isListening) {
-      // OFFにする
-      isListening = false;
-      recognition && recognition.stop();
-      btnVoice.classList.remove('listening');
-      btnVoice.textContent = '🎤';
-      showToast('🎤 音声認識 OFF');
-      return;
-    }
-    // ONにする
-    recognition = setupRecognition();
-    if (!recognition) return;
-    isListening = true;
-    btnVoice.classList.add('listening');
-    btnVoice.textContent = '🔴';
-    showToast('🎤 音声認識 ON — ボタンを再度押すとOFF');
-    recognition.start();
-  });
-
-  // ═══════════════════════════════════
-  // KEYBOARD SHORTCUTS
-  // ═══════════════════════════════════
-  document.addEventListener('keydown', e => {
-    // prevent default for Space (scroll)
-    if (e.target.tagName === 'INPUT') return;
-    switch(e.code) {
-      case 'Space':
-        e.preventDefault();
-        togglePlay();
-        break;
-      case 'KeyB':
-        btnBlur.click();
-        break;
-      case 'ArrowLeft':
-        e.preventDefault();
-        video.currentTime = Math.max(0, video.currentTime - 10);
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        video.currentTime = Math.min(video.duration||0, video.currentTime + 10);
-        break;
-    }
-  });
-
-  // ═══════════════════════════════════
-  // CLOCK
-  // ═══════════════════════════════════
-  const clockTime = document.getElementById('clockTime');
-
-  function updateClock() {
-    const now = new Date();
-    const hh  = String(now.getHours()).padStart(2, '0');
-    const mm  = String(now.getMinutes()).padStart(2, '0');
-    const ss  = String(now.getSeconds()).padStart(2, '0');
-    clockTime.textContent = hh + '時' + mm + '分' + ss + '秒';
-  }
-
-  updateClock();
-  setInterval(updateClock, 1000);
-
-  // 初期表示
-  showUI();
-
-</script>
-</body>
-</html>
+      showToast(`「${text

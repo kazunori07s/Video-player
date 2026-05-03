@@ -470,7 +470,7 @@
   }
   // 画面タップで表示
   app.addEventListener('click', showUI);
-  app.addEventListener('touchstart', showUI, { passive: true });
+  document.addEventListener('touchstart', showUI, { passive: true });
   // コントロール操作中はタイマーリセット
   document.querySelectorAll('input[type=range], button').forEach(el => {
     el.addEventListener('pointerdown', showUI);

@@ -1,10 +1,28 @@
 <script>
 
 /* =========================
+   要素取得（これ必須）
+========================= */
+const video = document.getElementById('video');
+const micBtn = document.getElementById('micBtn');
+const fileInput = document.getElementById('fileInput');
+const app = document.getElementById('app');
+const toast = document.getElementById('toast');
+
+let uiTimer;
+
+/* =========================
+   音声認識チェック
+========================= */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (!SpeechRecognition) {
+  alert("この環境は音声認識に対応していません");
+}
+
+/* =========================
    初期設定
 ========================= */
-
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 const recognition = new SpeechRecognition();
 
 recognition.lang = 'ja-JP';
@@ -12,37 +30,62 @@ recognition.continuous = true;
 recognition.interimResults = false;
 
 let recognizing = false;
+let restarting = false;
 
 /* =========================
-   音声認識スタート（1回押すだけ）
+   スタート（1回押すだけ）
 ========================= */
-
 micBtn.onclick = () => {
-  if(!recognizing){
-    recognition.start();
-    recognizing = true;
-    showToast("音声操作ON");
+  if (!recognizing) {
+    try {
+      recognition.start();
+      recognizing = true;
+      showToast("音声操作ON");
+    } catch (e) {
+      console.log("startエラー", e);
+    }
   }
 };
 
-/* 自動再起動（完全ハンズフリー化） */
+/* =========================
+   安全な自動再起動
+========================= */
 recognition.onend = () => {
-  recognition.start();
+  if (recognizing && !restarting) {
+    restarting = true;
+    setTimeout(() => {
+      try {
+        recognition.start();
+      } catch(e){}
+      restarting = false;
+    }, 500);
+  }
+};
+
+/* =========================
+   エラー処理
+========================= */
+recognition.onerror = (e) => {
+  console.log("音声エラー:", e.error);
+
+  if (e.error === "not-allowed") {
+    showToast("マイク許可が必要");
+    recognizing = false;
+  }
 };
 
 /* =========================
    コマンド処理
 ========================= */
-
 recognition.onresult = (e) => {
 
-  const text = e.results[e.results.length - 1][0].transcript;
+  const text = e.results[e.results.length - 1][0].transcript.trim();
 
   console.log("認識:", text);
   showUI();
 
   /* ---------- ファイル ---------- */
-  if (text.includes('ファイル') || text.includes('動画開いて')) {
+  if (text.includes('ファイル') || text.includes('動画')) {
     fileInput.click();
     showToast("動画選択");
   }
@@ -94,8 +137,8 @@ recognition.onresult = (e) => {
   }
 
   /* ---------- 数値音量 ---------- */
-  const match = text.match(/(\d+)%/);
-  if(match){
+  const match = text.match(/(\d+)\s*%/);
+  if (match) {
     let v = Math.min(100, parseInt(match[1]));
     video.muted = false;
     video.volume = v / 100;
@@ -105,10 +148,8 @@ recognition.onresult = (e) => {
 };
 
 /* =========================
-   UX改善
+   UI表示
 ========================= */
-
-/* 音声検出でUI自動表示 */
 function showUI(){
   app.classList.add('ui-visible');
   clearTimeout(uiTimer);
@@ -117,11 +158,13 @@ function showUI(){
   },7000);
 }
 
-/* トースト */
+/* =========================
+   トースト
+========================= */
 function showToast(msg){
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(()=>toast.classList.remove('show'),1500);
 }
 
-   </script>
+</script>

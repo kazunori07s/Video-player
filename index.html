@@ -187,14 +187,14 @@ function handleCmd(text){
 btnVoice.onclick=function(){
   if(isListening){
     isListening=false;if(recognition)recognition.stop();
-    btnVoice.textContent='🎤';showToast('🎤 OFF');return;
+    btnVoice.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/><path d="M3 10c0 .5.1 1 .2 1.5"/><path d="M20.8 11.5A9 9 0 0 0 21 10"/></svg>';showToast('🎤 OFF');return;
   }
   var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showToast('音声認識非対応');return;}
   recognition=new SR();recognition.lang='ja-JP';recognition.continuous=false;recognition.interimResults=false;
   recognition.onresult=function(e){handleCmd(e.results[0][0].transcript);};
-  recognition.onend=function(){if(isListening){try{recognition.start();}catch(e){}}else{btnVoice.textContent='🎤';}};
-  recognition.onerror=function(e){if(e.error==='no-speech'||e.error==='aborted')return;showToast('エラー:'+e.error);isListening=false;btnVoice.textContent='🎤';};
+  recognition.onend=function(){if(isListening){try{recognition.start();}catch(e){}}else{btnVoice.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/><path d="M3 10c0 .5.1 1 .2 1.5"/><path d="M20.8 11.5A9 9 0 0 0 21 10"/></svg>';}};
+  recognition.onerror=function(e){if(e.error==='no-speech'||e.error==='aborted')return;showToast('エラー:'+e.error);isListening=false;btnVoice.innerHTML='<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8c87a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="9" y="2" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/><path d="M3 10c0 .5.1 1 .2 1.5"/><path d="M20.8 11.5A9 9 0 0 0 21 10"/></svg>';};
   isListening=true;btnVoice.textContent='🔴';showToast('🎤 ON');recognition.start();
 };
 </script>

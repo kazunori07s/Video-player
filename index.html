@@ -96,7 +96,7 @@ var timeLabel=document.getElementById('timeLabel');
 var blurOverlay=document.getElementById('blurOverlay');
 var fileInput=document.getElementById('fileInput');
 var btnOpen=document.getElementById('btnOpen');
-var btnBlur=document.getElementById('btnBlur');
+
 var btnVoice=document.getElementById('btnVoice');
 var btnHelp=document.getElementById('btnHelp');
 var btnHelpClose=document.getElementById('btnHelpClose');
@@ -148,7 +148,7 @@ function fmt(s){
 }
 
 // ぼかし
-btnBlur.onclick=function(){toggleBlur();};
+
 function toggleBlur(){
   blurOn=!blurOn;
   blurOverlay.className=blurOn?'on':'';

@@ -98,18 +98,18 @@
     z-index: 25;
     width: 58px; height: 58px;
     border-radius: 50%;
-    background: rgba(0,0,0,0.5);
-    border: 2px solid rgba(255,255,255,0.3);
+    background: radial-gradient(circle at 40% 35%, #3a3a3a, #1a1a1a);
+    border: 1.5px solid rgba(255,255,255,0.08);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    transition: border-color 0.2s, background 0.2s;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   }
   .mic-btn:active { transform: scale(0.92); }
   .mic-btn.listening {
-    background: rgba(255,40,40,0.2);
+    background: radial-gradient(circle at 40% 35%, #3a1a1a, #1a0a0a);
     border-color: var(--danger);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6), 0 0 0 0 rgba(255,79,79,0.5);
     animation: micPulse 1s ease-in-out infinite;
   }
   @keyframes micPulse {
@@ -174,19 +174,13 @@
   <button class="mic-btn" id="btnMic" title="音声コントロール">
     <svg id="micSvg" width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
       <!-- マイク本体 -->
-      <rect x="10" y="2" width="10" height="16" rx="5" fill="white"/>
+      <rect x="10" y="2" width="10" height="16" rx="5" fill="#c9a84c"/>
       <!-- スタンド弧 -->
-      <path d="M5 15c0 5.52 4.48 10 10 10s10-4.48 10-10" stroke="white" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+      <path d="M6 16c0 4.97 4.03 9 9 9s9-4.03 9-9" stroke="#c9a84c" stroke-width="2.4" stroke-linecap="round" fill="none"/>
       <!-- 軸 -->
-      <line x1="15" y1="25" x2="15" y2="28" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+      <line x1="15" y1="25" x2="15" y2="28" stroke="#c9a84c" stroke-width="2.4" stroke-linecap="round"/>
       <!-- 台座 -->
-      <line x1="10" y1="28" x2="20" y2="28" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
-      <!-- 電波 左 -->
-      <path d="M3.5 11 Q1 15 3.5 19" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <path d="M0.5 8.5 Q-2.5 15 0.5 21.5" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <!-- 電波 右 -->
-      <path d="M26.5 11 Q29 15 26.5 19" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
-      <path d="M29.5 8.5 Q32.5 15 29.5 21.5" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <line x1="10" y1="28" x2="20" y2="28" stroke="#c9a84c" stroke-width="2.4" stroke-linecap="round"/>
     </svg>
   </button>
 </div>
@@ -289,7 +283,7 @@
 
   // ── マイクアイコン色変更 ──
   function setMicColor(listening) {
-    const color = listening ? '#ff4f4f' : 'white';
+    const color = listening ? '#ff4f4f' : '#c9a84c';
     micSvg.querySelectorAll('rect, path, line').forEach(el => {
       if (el.hasAttribute('fill') && el.getAttribute('fill') !== 'none') el.setAttribute('fill', color);
       if (el.hasAttribute('stroke') && el.getAttribute('stroke') !== 'none') el.setAttribute('stroke', color);

@@ -1,4 +1,4 @@
-package com.example.myapps; // ← ご自身のプロジェクトのパッケージ名に書き換えてください
+package Video-player; // ← ここはご自身のプロジェクト名に合わせてください
 
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
+    // ★重要: ここで webView を変数として宣言します
     private WebView webView;
     private static final int FILE_CHOOSER_RESULT_CODE = 100;
 
@@ -20,49 +21,46 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 1. WebViewの初期化
+        // レイアウト(xml)上のWebViewを取得
         webView = findViewById(R.id.webview);
-        WebSettings webSettings = webView.getSettings();
         
-        // JavaScriptを有効にする
+        // WebViewの設定
+        WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
-        // ローカルファイルへのアクセスを許可
         webSettings.setAllowFileAccess(true);
         webSettings.setAllowContentAccess(true);
         webSettings.setDomStorageEnabled(true);
-
-        // ページ遷移をWebView内で完結させる
+        
+        // リンククリック時にブラウザに飛ばないようにする
         webView.setWebViewClient(new WebViewClient());
 
-        // 2. JavaScriptとの「橋渡し」を設定
-        // これによりHTML側から "AndroidInterface.openNativeFilePicker()" が呼べるようになります
+        // JavaScriptとの連携窓口を登録
         webView.addJavascriptInterface(new WebAppInterface(), "AndroidInterface");
 
-        // 3. HTMLファイルの読み込み (assetsフォルダ内の video_player-44.html)
+        // HTMLファイルを読み込む
         webView.loadUrl("file:///android_asset/video_player-44.html");
     }
 
     /**
-     * JavaScriptから呼び出されるメソッドを定義するクラス
+     * JavaScriptから呼び出されるクラス
      */
     public class WebAppInterface {
         @JavascriptInterface
         public void openNativeFilePicker() {
-            // 音声認識で「ファイルを開く」系の言葉を検知したときに実行される
+            // 音声認識で「ファイルを開く」と言われたときに実行
             Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-            intent.setType("video/*"); // 動画ファイルのみ
+            intent.setType("video/*");
             intent.addCategory(Intent.CATEGORY_OPENABLE);
-            
             try {
                 startActivityForResult(Intent.createChooser(intent, "動画を選択"), FILE_CHOOSER_RESULT_CODE);
-            } catch (android.content.ActivityNotFoundException ex) {
-                Toast.makeText(MainActivity.this, "ファイルマネージャーが見つかりません", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "エラーが発生しました", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
     /**
-     * ファイル選択画面から戻ってきた時の処理
+     * ファイル選択後に呼ばれる処理
      */
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -72,8 +70,7 @@ public class MainActivity extends AppCompatActivity {
             if (data != null && data.getData() != null) {
                 Uri videoUri = data.getData();
                 
-                // 4. 選択された動画のURIをHTML側のJavaScript関数「setVideoSource」へ渡す
-                // UIスレッドで実行する必要があります
+                // HTML内のJavaScript関数「setVideoSource」を実行して動画パスを送る
                 webView.post(() -> {
                     String script = "javascript:setVideoSource('" + videoUri.toString() + "')";
                     webView.loadUrl(script);

@@ -63,23 +63,11 @@
   }
   .controls.hide { opacity: 0; pointer-events: none; }
 
-  button {
-    background: none;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.1s, color 0.2s;
-  }
+  button { background: none; border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s, color 0.2s; }
   button:active { transform: scale(0.9); }
   svg { width: 32px; height: 32px; fill: currentColor; }
-
-  /* ─── MIC BUTTON ─── */
   .btn-mic.listening { color: var(--danger); animation: pulse 1.5s infinite; }
   @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
   input[type="file"] { display: none; }
 </style>
 </head>
@@ -95,17 +83,14 @@
     <button id="btnFile" title="動画を選択">
       <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
     </button>
-    
     <button id="btnPlayPause">
       <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
       <svg id="iconPause" viewBox="0 0 24 24" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
     </button>
-
     <button id="btnMic" class="btn-mic" title="音声認識">
       <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/><path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
     </button>
   </div>
-
   <input type="file" id="fileInput" accept="video/*">
 </div>
 
@@ -127,7 +112,6 @@
   let isBlackout = false;
   let hideTimeout;
 
-  // ── 時計 ──
   function updateClock() {
     const now = new Date();
     clockEl.textContent = now.toLocaleTimeString('ja-JP', { hour12: false });
@@ -135,24 +119,18 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  // ── トースト表示 ──
   function showToast(msg) {
     toastEl.textContent = msg;
     toastEl.classList.add('show');
     setTimeout(() => toastEl.classList.remove('show'), 2000);
   }
 
-  // ── 動画読み込み ──
   btnFile.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', e => {
     const file = e.target.files[0];
-    if (file) {
-      video.src = URL.createObjectURL(file);
-      video.play();
-    }
+    if (file) { video.src = URL.createObjectURL(file); video.play(); }
   });
 
-  // ── 再生・停止 ──
   function togglePlay() {
     if (video.paused) video.play();
     else video.pause();
@@ -161,20 +139,13 @@
   video.onpause = () => { iconPlay.style.display = 'block'; iconPause.style.display = 'none'; };
   btnPlayPause.addEventListener('click', togglePlay);
 
-  // ── コントロール表示制御 ──
   function showControls() {
     controls.classList.remove('hide');
     clearTimeout(hideTimeout);
-    if (!video.paused) {
-      hideTimeout = setTimeout(() => controls.classList.add('hide'), 3000);
-    }
+    if (!video.paused) { hideTimeout = setTimeout(() => controls.classList.add('hide'), 3000); }
   }
   document.addEventListener('mousemove', showControls);
   document.addEventListener('touchstart', showControls);
-  video.onplay = () => {
-    iconPlay.style.display = 'none'; iconPause.style.display = 'block';
-    showControls();
-  };
 
   // ── 音声コマンド処理 ──
   function handleCommand(text) {
@@ -185,7 +156,7 @@
     if (cmd.includes('再生') || cmd.includes('スタート')) { video.play(); }
     else if (cmd.includes('停止') || cmd.includes('ストップ')) { video.pause(); }
     
-    // 音量調整 (今回追加分)
+    // 音量調整
     else if (cmd.includes('音量') && (cmd.includes('上げ') || cmd.includes('大きく') || cmd.includes('アップ'))) {
       video.volume = Math.min(1.0, video.volume + 0.1);
       showToast('🔊 音量: ' + Math.round(video.volume * 100) + '%');
@@ -199,6 +170,15 @@
       showToast(video.muted ? '🔇 ミュート中' : '🔊 ミュート解除');
     }
 
+    // ★重要: ネイティブのファイル選択画面を直接開く
+    else if (cmd.includes('ファイル') || cmd.includes('開く')) {
+      if (window.AndroidInterface) {
+        window.AndroidInterface.openNativeFilePicker();
+      } else {
+        showToast('ネイティブ連携が未設定です');
+      }
+    }
+
     // ブラックアウト
     else if (cmd.includes('ブラック') || cmd.includes('黒')) {
       isBlackout = !isBlackout;
@@ -206,48 +186,36 @@
     }
   }
 
-  // ── 音声認識セットアップ ──
+  // ★重要: Android側からパスを受け取る関数
+  function setVideoSource(uri) {
+    video.src = uri;
+    video.play();
+    showToast('動画を読み込みました');
+  }
+
   function setupRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { showToast('このブラウザは音声認識非対応です'); return null; }
     const r = new SR();
     r.lang = 'ja-JP'; r.continuous = false; r.interimResults = false;
     r.onresult = e => handleCommand(e.results[0][0].transcript);
-    r.onend = () => {
-      if (isListening) { try { r.start(); } catch(_) {} }
-      else { btnMic.classList.remove('listening'); }
-    };
-    r.onerror = e => {
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
-      showToast('エラー: ' + e.error);
-      isListening = false;
-      btnMic.classList.remove('listening');
-    };
+    r.onend = () => { if (isListening) { try { r.start(); } catch(_) {} } else { btnMic.classList.remove('listening'); } };
+    r.onerror = e => { if (e.error === 'no-speech' || e.error === 'aborted') return; isListening = false; btnMic.classList.remove('listening'); };
     return r;
   }
 
   btnMic.addEventListener('click', e => {
     e.stopPropagation();
-    if (isListening) {
-      isListening = false;
-      recognition && recognition.stop();
-      btnMic.classList.remove('listening');
-      showToast('🎤 音声認識 OFF');
-      return;
-    }
+    if (isListening) { isListening = false; recognition && recognition.stop(); btnMic.classList.remove('listening'); showToast('🎤 音声認識 OFF'); return; }
     recognition = setupRecognition();
     if (!recognition) return;
-    isListening = true;
-    btnMic.classList.add('listening');
-    showToast('🎤 音声認識 ON');
-    recognition.start();
+    isListening = true; btnMic.classList.add('listening'); showToast('🎤 音声認識 ON'); recognition.start();
   });
 
-  // ── キーボード操作 ──
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT') return;
-    if (e.code === 'Space')      { e.preventDefault(); togglePlay(); }
-    if (e.code === 'KeyB')       { isBlackout = !isBlackout; blurOverlay.classList.toggle('active', isBlackout); }
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'KeyB') { isBlackout = !isBlackout; blurOverlay.classList.toggle('active', isBlackout); }
   });
 </script>
 </body>
